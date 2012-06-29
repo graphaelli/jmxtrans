@@ -183,13 +183,22 @@ public class GangliaGmetricWriter extends BaseOutputWriter {
                         String key = JmxUtils.getKeyString2(query, result, values, typeNames, null);
                         String type = DataType.forValue(val).getTypeName();
                         List<String> command = assembleGmetricCommand(key, val.toString(), type);
-                        Process proc = new ProcessBuilder(command).start();
                         if (log.isDebugEnabled())
                             log.debug("executing: " + StringUtils.join(command, ' '));
 
-                        int exitCode = proc.waitFor();
-                        if (exitCode != 0) {
-                            log.error("failed to execute " + StringUtils.join(command, ' ') + ", exited: " + exitCode);
+                        Process proc = null;
+                        try {
+                            proc = new ProcessBuilder(command).start();
+                            // TODO: don't wait forever
+                            int exitCode = proc.waitFor();
+                            if (exitCode != 0) {
+                                log.error("command failed: " + StringUtils.join(command, ' ') + ", exited: " + exitCode);
+                            }
+                        } catch (InterruptedException e) {
+                            log.error("command interrupted: " + StringUtils.join(command, ' '), e);
+                        } finally {
+                            if (proc != null)
+                                proc.destroy();
                         }
                     }
                 }
